@@ -7,13 +7,14 @@
 #!/bin/env python3
 import lxml.html, os, sys, itertools, urllib.request
 from collections import defaultdict
-
+#
 ### CONFIG BEGIN ###
 # Maximum words to consider
 max = 10
 #
 # Output File --> Pflege append ein! @TODO 
-file = "/Users/benjaminweb/vocs/INBOX2.txt"
+infile = "/Users/benjaminweb/vocs/_INFILE.txt"
+outfile = "/Users/benjaminweb/vocs/_OUTFILE.txt"
 #
 # Schema to write to file --> embed @TODO
 delim = "=" # separates two languages
@@ -21,11 +22,14 @@ sep = "," # separates multiple meanings
 #
 # result list
 result = [] 
+skipped = []
 #
+choice = ""
 # input word
 #word = ' '.join(sys.argv[1:])
 #word = word.strip('\"')
 #word = word.strip()
+word = ""
 #
 sources = []
 #
@@ -39,17 +43,18 @@ sources = []
 #
 ### HELPING FUNCTIONS BEGIN ###
 #
-# collect all words to translate
-def collect(): # 2013-08-31 works
+# collect all words to translate from infile
+def collect(file): # 2013-08-31 works
 	f = open(file, 'r') # w truncates the file!
-	targets = []
 	for line in f.readlines():
 		if not " = " in line:
 			targets.append(str(line.replace('\n','').strip()))
 			# check whether target is valid! @TODO 2013-08-31
 	f.close()
-	return targets
-	
+	return
+#	
+#	
+#	
 # remove duplicates
 def clean(L):
 	seen = set()
@@ -59,7 +64,7 @@ def clean(L):
 		item = ' '.join(item.split())
 		seen.add(item)
 	return sorted(seen)
-
+#
 # clean duplicates in translations
 def deldups(dups):
 	q = ""
@@ -72,7 +77,7 @@ def deldups(dups):
 def load_existing(word):
 	existing = []
 	exists = 0
-	f = open(file, 'r') # w truncates the file!	
+	f = open(outfile, 'r') # w truncates the file!	
 	for line in f:
 		if "%s = " % word in line:
 			exists = 1
@@ -93,7 +98,7 @@ def clean_selection(selection):
 ### MAIN FUNCTIONS BEGIN ###
 #
 # merge & sort entries in existing file; truncate file; write file completely new, entry by entry
-def merge():
+def merge(file):
 	f = open(file, 'r+') # w truncates the file!
 	v = []
 	g = []
@@ -113,38 +118,45 @@ def merge():
 	with open(file, "w") as myfile:
 		myfile.write(text)
 
-def build_entry(selection, word): # schema: word = trans1,trans2,trans3
+def build_entry(word, selection): # schema: word = trans1,trans2,trans3
 	selection = sep.join(selection)
 	entry = "%s %s %s" %(word, delim, selection)
 	#entry = "\n" + entry.rstrip(',') + "\n"
 	return entry
 
-def remove(expression):
-	list = []
-	for i in f.readlines():
-		if not expression in i:
-			list.append(i.replace("\n",""))
-	return list
+#### clarify & abstract! 
+#### with or without file open?
+#### use in save(word) & remove word from infile @TODO 2013-09-01
+#
 
-def write(text):
+## @WIP 2013-09-01
+def remove(word, file):
+	text = []
+	f = open(file, "r")
+	for i in f.readlines():
+		if "%s" % word not in i:
+			text.append(i.replace("\n",''))
+	f.close()
+	f = open(file, "w") # truncate file
+	write(text, file)	
+	
+def write(text, file):
+	text.sort()
 	f = open(file, 'w') # truncates file!
 	for element in text:
 		f.write("%s\n" % element)
 	f.close() # close file, required!
 
-def save(word, entry=None):
-	# open file in read mode
-	f = open(file, 'r') # w truncates the file!	
-	text = []
-	text = remove("%s =" % word)
-	# add new entry
-	if entry:
-		text.append(entry)
-	# sort elements of file
-	text.sort() # still working?
-	# write text elements to file
-	write(text)	
-	
+# write entry to outfile
+def add(word, selection, file):
+	f = open(file, "a")
+	entry = build_entry(word, selection)
+	f.write("%s\n" % entry) # word = trans1,trans2,trans3
+	f.close()
+
+#
+#
+#
 # voc1 = linguee():
 def linguee(word): # 2013-08-11 works
 	try:
@@ -159,7 +171,7 @@ def linguee(word): # 2013-08-11 works
 		response = response[:max] # cut to max elements
 		return response
 	except OSError:
-		input("IP blocked by linguee.de. [ENTER] ")
+		print("IP blocked by linguee.de.")
 	#IOError:	
 
 # voc2 = dictcc(word)
@@ -183,14 +195,12 @@ def leo(word): # 2013-08-26 wrong encoding provisioning of site fixed,
 	return response
 
 # look up 1 to 3 & merge them
-
-translators = {
-    'linguee.de': linguee,
-    'dict.cc': dictcc,
-#    'dict.leo.org': leo
-}
-
 def translate(word):
+	translators = {
+    	'linguee.de': linguee,
+	    'dict.cc': dictcc,
+	    #'dict.leo.org': leo
+	}
 #	try:
 	inputs = []
 	for source, func in translators.items():
@@ -204,17 +214,29 @@ def translate(word):
 #	except urllib.error.URLError or OSError:
 #		input("Check your internet connectivity.\n~ ")
 	return clean(result)
-	
+#	
+#	
+#	
+#	
 #http://www.cyberciti.biz/faq/python-raw_input-examples/
-def main(result, word): # 2013-08-12 works
+def select(target, result): # 2013-08-12 works
+
+	def skip(append=None):
+		selection = None
+		targets.remove(target)
+		remove(target, infile)
+		if append:
+			f = open(infile, "a")
+			f.write("%s\n" % target)
+			f.close()
+
 	selection = []
 	is_valid = 0
-	existing = load_existing(word)
+	existing = load_existing(target)
 	selection = existing
 	remaining = list(set(result).difference(selection))
 	#merge()
-	while not is_valid:
-		#selection = clean_selection(selection)
+	while True:
 		tcount = len(result)
 		scount = len(set(selection).intersection(result))
 		mcount = len(selection)-scount # count of manual
@@ -229,7 +251,8 @@ def main(result, word): # 2013-08-12 works
 		print (60 * '=')
 		print
 		print (60 * '-')
-		print ("%s available translations for \"%s\"" % (len(result), word))#, lambda sources: ', '.join(sources)))
+		#### include here display of sourced used! @TODO 2013-09-01
+		print ("%s available translations for \"%s\"" % (len(result), target))#, lambda sources: ', '.join(sources)))
 		print (60 * '-')
 		# order list
 		remaining.sort()
@@ -262,15 +285,24 @@ def main(result, word): # 2013-08-12 works
 		print ("[1-%d]\tAdd & Remove translation" % tcount)
 		print ("word\tAdd & Remove \"word\"")
 		print ("[D]\tDelete selection")
-		print ("[ENTER]\tSave & Next")
+		print ("[E]\tRename to base / infinitive")
 		print ("[S]\tSkip")
+		print ("")
+		print ("[ENTER]\tSave & Next")
 		print ("[Q]\tQuit")
 		print (60 * '-')
 		print
 		choice = input("~ ")
-		if choice == "":
-			is_valid = 1
-		# if choice is integer
+		# if [ENTER] = SAVE & NEXT is hit, interrupt loop
+		#repr(choice) ## DEBUG
+		if choice == "" and selection == []:
+			skip(append=True)
+			break
+		elif choice == "": # works 2013-09-01
+			break
+		#
+		### begin change selection ###
+		# if choice is integer -> change selection
 		try:
 			# add result(choice) to selection if not there!
 			if result[int(choice)-1] in selection:
@@ -278,7 +310,7 @@ def main(result, word): # 2013-08-12 works
 			# remove result(choice) if in selection!
 			else:
 				selection.append(result[int(choice)-1])
-		# if choice is manual	
+		# if choice is not integer -> 	
 		except ValueError:
 			# clean(choice)
 			choice = choice.strip()
@@ -290,28 +322,45 @@ def main(result, word): # 2013-08-12 works
 				selection.remove(choice)
 		except IndexError:
 			input("Not available.\n~ ")
+		# truncate selection
 		if choice == "D" or choice == "d":
 			selection = []
+		# quit
 		elif choice == "Q" or choice == "q":
 			quit()
-		elif choice == "S" or choice == "s":
-			is_valid = 1 # out of loop
-		# remove empty elements in selection
+		elif choice == "E" or choice == "e":
+			renamed = input("Infinitive or base form of \"%s\": " % target)
+			selection.remove(choice)
+			if renamed:
+				targets.remove(target)
+				targets.insert(0, renamed)
+				selection.remove(choice)
+				break
+		# clean selection from empty elements: ''
 		if selection:
 			selection = clean_selection(selection)
+		# what is available and has not been selected?
 		remaining = list(set(result).difference(selection))
 		#print("SELECTION %s" % len(selection)) ##DEBUG
 		#print(repr(selection)) ##DEBUG
-	if not selection: # work 2013-08-29
-		save(None)
-	elif not choice == "S" and not choice == "s":
-		entry = build_entry(selection, word)
-		save(word, entry)		
-	return
+	return selection
+
+def save(target, selection):
+	if not choice == "S" and not choice == "s":
+		if selection:
+			# remove translated word from infile
+			remove(target, infile)
+			# remove translated word from infile
+			remove(target, outfile)
+			# add word to outfile
+			add(target, selection, outfile)
+			if target in targets:
+				targets.remove(target)
+		elif not selection:
+			remove(target, outfile)
+			#### add it back to infile, even if never was present in infile? @TODO 2013-09-01
+
 ### MAIN FUNCTIONS END ###
-
-#def count():
-
 
 
 # 2 modi:
@@ -321,23 +370,27 @@ def main(result, word): # 2013-08-12 works
 # design function call for 2 modi @TODO 2013-08-29
 
 # modi 1
-# open input file
-f = open(file, 'r') # w truncates the file!
-targets = ""
 
 # collect all words not translated yet
+targets = []
+collect(infile)
+
+while True:
+	# 1. get stuff to translate, out: targets
+	word = targets[0]
+	# 2. get translations, build selection, out: selection
+	translations = translate(word)
+	print(word)
+	selection = select(word, translations)
+	print(word)
+	# 3. write results to files
+	save(word, selection) #### @WIP 2013-09-01
+	if not targets:
+		print("Finished.")
+		quit()
 
 
-targets = collect()
 
-for target in targets:
-	translations = translate(target)
-	main(translations, target)
-	if len(targets) > 1:
-		targets.remove(target)
-	elif len(targets) == 1:
-		break
-	
 
 		# if translation of target present, delete originating target entry 
 #	if "%s = " % target in line:
@@ -353,5 +406,14 @@ for target in targets:
 #translations=translate(word)
 #main(translations)
 
+
+
 #for line in f.readlines():
 #		v.append(line.replace('\n','').rstrip(",").split(' = '))
+
+
+
+
+
+#def count():
+
