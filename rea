@@ -4,9 +4,9 @@
 if [ "$1" = "" ]
 then
 	{
-	echo "\tUsage: rea ID"
-	echo "\tWhere 'ID' is unique task id or task UUID."
-	echo "\tThis script shows you the arithmetic mean time you have been active on a *recurring* task."
+	echo "Usage: rea ID"
+	echo "Where 'ID' is unique task id or task UUID."
+	echo "This script shows you the arithmetic mean time you have been active on a *recurring* task."
 	exit
 	}
 fi
