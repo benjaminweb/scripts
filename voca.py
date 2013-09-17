@@ -13,16 +13,19 @@ from collections import defaultdict
 max = 10
 #
 # Output File --> Pflege append ein! @TODO 
-infile = "/Users/benjaminweb/vocs/_INFILE.txt"
-outfile = "/Users/benjaminweb/vocs/_OUTFILE.txt"
+infile = "/Users/benjaminweb/vocs/mth_in.txt"
+outfile = "/Users/benjaminweb/vocs/mth_out.txt"
 #
 # Schema to write to file --> embed @TODO
 delim = "=" # separates two languages
 sep = "," # separates multiple meanings
 #
+targets = []
+#
 # result list
-result = [] 
-skipped = []
+result = []
+voc_count = 0
+translated_count = 0
 #
 choice = ""
 # input word
@@ -32,6 +35,7 @@ choice = ""
 word = ""
 #
 sources = []
+#
 #
 #for i in sys.argv[1:]:
 #	word = 
@@ -199,11 +203,12 @@ def translate(word):
 	translators = {
     	'linguee.de': linguee,
 	    'dict.cc': dictcc,
-	    #'dict.leo.org': leo
+	    'dict.leo.org': leo
 	}
 #	try:
 	inputs = []
 	for source, func in translators.items():
+		word = word.replace(' ', '+') # replace whitespace with '+'
 		translation = func(word)
 		if translation:
 			sources.append(source)
@@ -220,7 +225,7 @@ def translate(word):
 #	
 #http://www.cyberciti.biz/faq/python-raw_input-examples/
 def select(target, result): # 2013-08-12 works
-
+#
 	def skip(append=None):
 		selection = None
 		targets.remove(target)
@@ -235,6 +240,7 @@ def select(target, result): # 2013-08-12 works
 	existing = load_existing(target)
 	selection = existing
 	remaining = list(set(result).difference(selection))
+	voc_count = len(targets)
 	#merge()
 	while True:
 		tcount = len(result)
@@ -252,7 +258,7 @@ def select(target, result): # 2013-08-12 works
 		print
 		print (60 * '-')
 		#### include here display of sourced used! @TODO 2013-09-01
-		print ("%s available translations for \"%s\"" % (len(result), target))#, lambda sources: ', '.join(sources)))
+		print ("{} available translations for \"{}\" [{}/{} = {:.0%}]".format(len(result), target, translated_count, voc_count, translated_count/voc_count))
 		print (60 * '-')
 		# order list
 		remaining.sort()
@@ -286,9 +292,9 @@ def select(target, result): # 2013-08-12 works
 		print ("word\tAdd & Remove \"word\"")
 		print ("[D]\tDelete selection")
 		print ("[E]\tRename to base / infinitive")
-		print ("[S]\tSkip")
+		print ("[R]\tRemove \"%s\" from input file" % target)
 		print ("")
-		print ("[ENTER]\tSave & Next")
+		print ("[ENTER]\tSave & Next (& Quit when input file empty.)")
 		print ("[Q]\tQuit")
 		print (60 * '-')
 		print
@@ -330,12 +336,18 @@ def select(target, result): # 2013-08-12 works
 			quit()
 		elif choice == "E" or choice == "e":
 			renamed = input("Infinitive or base form of \"%s\": " % target)
-			selection.remove(choice)
-			if renamed:
+			if renamed == target:
+				selection = []
+				break
+			if renamed and not renamed == target:
 				targets.remove(target)
 				targets.insert(0, renamed)
 				selection.remove(choice)
 				break
+		elif choice == "R" or choice == "r":
+			targets.remove(target)
+			remove(target, infile)
+			break
 		# clean selection from empty elements: ''
 		if selection:
 			selection = clean_selection(selection)
@@ -343,6 +355,7 @@ def select(target, result): # 2013-08-12 works
 		remaining = list(set(result).difference(selection))
 		#print("SELECTION %s" % len(selection)) ##DEBUG
 		#print(repr(selection)) ##DEBUG
+		### end change selection###
 	return selection
 
 def save(target, selection):
@@ -369,10 +382,10 @@ def save(target, selection):
 #3. no arg, no valid arg -> error message
 # design function call for 2 modi @TODO 2013-08-29
 
-# modi 1
+#### BEGIN MAIN PROGRAM ####
 
+# modi 1
 # collect all words not translated yet
-targets = []
 collect(infile)
 
 while True:
@@ -380,16 +393,18 @@ while True:
 	word = targets[0]
 	# 2. get translations, build selection, out: selection
 	translations = translate(word)
-	print(word)
 	selection = select(word, translations)
-	print(word)
 	# 3. write results to files
 	save(word, selection) #### @WIP 2013-09-01
+	translated_count += 1
+	#yield 
 	if not targets:
 		print("Finished.")
 		quit()
 
 
+
+#### END MAIN PROGRAM ####
 
 
 		# if translation of target present, delete originating target entry 
@@ -410,9 +425,6 @@ while True:
 
 #for line in f.readlines():
 #		v.append(line.replace('\n','').rstrip(",").split(' = '))
-
-
-
 
 
 #def count():
