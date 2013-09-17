@@ -1,0 +1,98 @@
+#~/scripts/rea
+#!/bin/bash
+
+# print usage if no arg provided
+if [ "$1" = "" ]
+then
+	{
+	echo "\tUsage: rea ID"
+	echo "\tWhere 'ID' is unique task id or task UUID."
+	echo "\tThis script shows you the arithmetic mean time you have been active on a *recurring* task."
+	exit
+	}
+fi
+
+# get taskwarrior version
+version=$(task --version)
+
+# $uuid is child of $parent
+child=$(task "$1" uuid)
+parent=$(task "$child" info|grep Parent|cut -c15-50)
+
+# check whether $parent is recurring, 1 if yes, 0 if not
+if [ "$parent" = "" ]
+then
+	recurring="0"
+else
+	recurring=$(task info "$parent" | grep Recurring |wc -l|cut -c8-14)
+fi
+
+# consider simplified interface of task 2.3.0 
+if [ "$recurring" = "1" ]
+then
+	{  
+	if [ "$version" = "2.3.0" ]
+	then
+		done_count=$(task rc.verbose=nothing parent:$(task _get $parent.$child) count)
+	else
+		done_count=$(task rc.verbose=nothing parent:$(task $parent rc.verbose=nothing info | grep $child | cut -c15-50) count)
+	fi
+	}
+else
+	echo "Task $1 is not of recurring type."
+	exit
+fi
+
+# get active time from task for $parent of $child
+active_time=$(task "$parent" info | grep Total | cut -c19-50)
+# calculate elapsed time in seconds
+if [ "$active_time" != "" ]
+then {
+	secs=$(IFS=: read h m s <<< "$active_time"; echo "3600*$h+60*$m+$s" | bc)
+	mean=$(echo "scale=4; $secs/$done_count" | bc)
+	echo "Mean time for task $child is $mean seconds."
+	}
+else
+	echo "Task $1 is has not been started. Total active time: 00:00:00."
+fi
+
+# @TODO 2013-09-09
+# Options:
+#
+# -l outfile.txt
+#
+# A.
+# calculate for each done count respective mean time, resulting in a list as follows
+# done count; mean time (s)
+# 1;2000
+# 2;1500
+# 3;1213
+# 4;800
+# 5;1430
+# 6;1343
+#
+# B.
+# Plot it with R / rrdtool
+#
+# C.
+# Print it / display it (RSS?)
+
+# Copyright Benjamin Weber <code@bwe.im>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
