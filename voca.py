@@ -350,12 +350,14 @@ def select(target, result): # 2013-08-12 works
 		elif choice == "R" or choice == "r":
 			targets.remove(target)
 			remove(target, infile)
+			selection = []
 			break
 		elif choice == "M" or choice == "m":
 			f = open(manual, "a")
 			f.write("%s\n" % target) # word = trans1,trans2,trans3
 			f.close()
 			remove(target, infile)
+			selection = []
 			break
 		# clean selection from empty elements: ''
 		if selection:
