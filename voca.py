@@ -345,6 +345,7 @@ def select(target, result): # 2013-08-12 works
 				targets.remove(target)
 				targets.insert(0, renamed)
 				selection.remove(choice)
+				remove(target, infile)
 				break
 		elif choice == "R" or choice == "r":
 			targets.remove(target)
