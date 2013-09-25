@@ -15,6 +15,7 @@ max = 10
 # Output File --> Pflege append ein! @TODO 
 infile = "/Users/benjaminweb/vocs/mth_in.txt"
 outfile = "/Users/benjaminweb/vocs/mth_out.txt"
+manual = "/Users/benjaminweb/vocs/mth_man.txt"
 #
 # Schema to write to file --> embed @TODO
 delim = "=" # separates two languages
@@ -292,6 +293,7 @@ def select(target, result): # 2013-08-12 works
 		print ("word\tAdd & Remove \"word\"")
 		print ("[D]\tDelete selection")
 		print ("[E]\tRename to base / infinitive")
+		print ("[M]\tMove to manual edit file")
 		print ("[R]\tRemove \"%s\" from input file" % target)
 		print ("")
 		print ("[ENTER]\tSave & Next (& Quit when input file empty.)")
@@ -348,6 +350,12 @@ def select(target, result): # 2013-08-12 works
 			targets.remove(target)
 			remove(target, infile)
 			break
+		elif choice == "M" or choice == "m":
+			f = open(manual, "a")
+			f.write("%s\n" % target) # word = trans1,trans2,trans3
+			f.close()
+			remove(target, infile)
+			break
 		# clean selection from empty elements: ''
 		if selection:
 			selection = clean_selection(selection)
@@ -363,7 +371,7 @@ def save(target, selection):
 		if selection:
 			# remove translated word from infile
 			remove(target, infile)
-			# remove translated word from infile
+			# remove translated word from outfile (= overwrite existing translations!)
 			remove(target, outfile)
 			# add word to outfile
 			add(target, selection, outfile)
