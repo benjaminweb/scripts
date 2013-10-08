@@ -195,16 +195,25 @@ def leo(word): # 2013-08-26 wrong encoding provisioning of site fixed,
 	# override wrong encoding information the site provides
 	parser = lxml.html.HTMLParser(encoding='utf-8')
 	doc = lxml.html.fromstring(content, parser=parser, base_url=url)
-	lim = max+4
-	for i in range(4, lim): response.append(' '.join(doc.xpath("//tr[%d]/td[2]/text()" % i)))
-	response = [x for x in response if len(x)>0]
+	trs = doc.xpath("//tr")
+	for tr in trs:
+		th = tr.xpath("th/text()")
+		td = ''.join(tr.xpath("td[2]/text()"))
+		if 'Weitere Treffer' in th or 'More Results' in th:
+			break
+		empty = td == ''
+		new_line = '\n' in td
+		tab = '\t' in td
+		if not empty and not new_line and not tab:
+			response.append(td)
+	#response = [x for x in response if len(x)>0]
 	return response
 
 # look up 1 to 3 & merge them
 def translate(word):
 	translators = {
-    	'linguee.de': linguee,
-	    'dict.cc': dictcc,
+#    	'linguee.de': linguee,
+#	    'dict.cc': dictcc,
 	    'dict.leo.org': leo
 	}
 #	try:
