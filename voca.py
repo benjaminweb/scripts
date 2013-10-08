@@ -49,6 +49,7 @@ sources = []
 ### HELPING FUNCTIONS BEGIN ###
 #
 # collect all words to translate from infile
+# @TODO 2013-10-03: BUG: Catch UnicodeEncodeError in load next word, e.g.: protégé
 def collect(file): # 2013-08-31 works
 	f = open(file, 'r') # w truncates the file!
 	for line in f.readlines():
@@ -169,7 +170,7 @@ def linguee(word): # 2013-08-11 works
 		# make request & get raw data
 		doc = lxml.html.parse("http://www.linguee.de/deutsch-englisch/search?source=auto&query=%s" % word)
 		# delete inexact entries & examples
-		for elem in doc.xpath("//div[@class='inexact']"): elem.getparent().remove(elem)
+		#for elem in doc.xpath("//div[@class='inexact']"): elem.getparent().remove(elem)
 		# provide response to list
 		response = doc.xpath("//a[@class='smalldictentry']/text()")
 		response = [x for x in response if len(x)>0]
@@ -186,10 +187,10 @@ def dictcc(word): # 2013-08-11 works,
 	for i in range(1, max): response.append(' '.join(doc.xpath("//*[@id='tr%d']/td[3]/a/text()" % i)))
 	return response		
 
-# voc3 = leo(word)	
+# voc3 = leo(word)
 def leo(word): # 2013-08-26 wrong encoding provisioning of site fixed, 
 	response = []
-	url = ("http://pda.leo.org/?search=%s" % word)
+	url = ("http://pda.leo.org/?search=%s" % word).replace(" ", "%20")
 	content = urllib.request.urlopen(url).read()
 	# override wrong encoding information the site provides
 	parser = lxml.html.HTMLParser(encoding='utf-8')
@@ -339,7 +340,6 @@ def select(target, result): # 2013-08-12 works
 		elif choice == "E" or choice == "e":
 			renamed = input("Infinitive or base form of \"%s\": " % target)
 			if renamed == target:
-				selection = []
 				break
 			if renamed and not renamed == target:
 				targets.remove(target)
@@ -356,8 +356,8 @@ def select(target, result): # 2013-08-12 works
 			f = open(manual, "a")
 			f.write("%s\n" % target) # word = trans1,trans2,trans3
 			f.close()
-			remove(target, infile)
-			selection = []
+			selection = None
+			skip(append=None)
 			break
 		# clean selection from empty elements: ''
 		if selection:
