@@ -212,8 +212,8 @@ def leo(word): # 2013-08-26 wrong encoding provisioning of site fixed,
 # look up 1 to 3 & merge them
 def translate(word):
 	translators = {
-#    	'linguee.de': linguee,
-#	    'dict.cc': dictcc,
+    	'linguee.de': linguee,
+	    'dict.cc': dictcc,
 	    'dict.leo.org': leo
 	}
 #	try:
